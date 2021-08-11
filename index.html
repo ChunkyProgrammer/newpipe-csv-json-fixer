@@ -4,48 +4,48 @@
     <meta charset="UTF-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>newpipe csv fixer</title>
+    <title>FreeTube csv fixer</title>
   </head>
   <body>
-    <h1>newpipe csv->json fixer</h1>
+    <h1>FreeTube csv->opml fixer</h1>
     <h2>attach subscriptions.csv file</h2>
     <input type="file" onchange="fileChange(event)" />
     <div id="link-container"></div>
 
-    <script src="papaparse.min.js"></script>
+    <script src="papaparse.js"></script>
     <script>
-      var jsonFile = null;
-      var linkContainerEl = document.getElementById("link-container");
+      let opmlFile = null;
+      let linkContainerEl = document.getElementById("link-container");
 
-      function makeTextFile(json) {
-        var data = new Blob([json], { type: "application/json" });
-        if (jsonFile !== null) URL.revokeObjectURL(jsonFile);
-        jsonFile = URL.createObjectURL(data);
-        return jsonFile;
+      function makeTextFile(opml) {
+        let data = new Blob([opml], { type: "text/x-opml" });
+        if (opmlFile !== null) URL.revokeObjectURL(opmlFile);
+        opmlFile = URL.createObjectURL(data);
+        return opmlFile;
       }
 
       function fileChange(event) {
-        var fileEl = event.target;
-        var file = fileEl.files[0];
-
-        if (file.type === "text/csv") {
+        let fileEl = event.target;
+        let file = fileEl.files[0];
+        let opmlData = '<opml version="1.1"><body><outline text="YouTube Subscriptions" title="YouTube Subscriptions">'
+        const endingOpmlString = "</outline></body></opml>"
+        if (file.name.substring(file.name.length-3,file.name.length) === "csv") {
           Papa.parse(file, {
             complete: function (results) {
-              var subscriptions = [];
+              let subscriptions = [];
               const rows = results.data;
               for (let i = 1; i < rows.length; i++) {
-                subscriptions.push({
-                  snippet: {
-                    resourceId: { channelId: rows[i][0] },
-                    title: rows[i][2],
-                  },
-                });
+                if (typeof rows[i][0] !== 'undefined') {
+                  const channelOpmlString = `<outline text="${rows[i][2]}" title="${rows[i][2]}" type="rss" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=${rows[i][0]}"/>`
+                  opmlData += channelOpmlString
+                }
               }
-              var blobUrl = makeTextFile(JSON.stringify(subscriptions));
+              opmlData += endingOpmlString
+              let blobUrl = makeTextFile(opmlData);
               linkContainerEl.innerHTML =
                 '<br><a href="' +
                 blobUrl +
-                '" download="subscriptions.json">Download generated subscriptions.json</a>';
+                '" download="subscriptions.opml">Download generated subscriptions.opml</a>';
             },
             error: function () {
               linkContainerEl.innerHTML = "";
